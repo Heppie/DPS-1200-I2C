@@ -62,8 +62,47 @@ bool hpdps_read_all(DpsSensors &s) {
     if (!hpdps_read(0x1E, raw)) return false;
     s.fan_rpm = raw;
 
+    s.in_w       = s.grid_v * s.grid_a;
+    s.out_w      = s.out_v  * s.out_a;
+    s.efficiency = (s.in_w > 1.0f) ? (s.out_w / s.in_w * 100.0f) : 0.0f;
+
     s.valid = true;
     return true;
+}
+
+bool hpdps_read_eeprom(uint8_t offset, uint8_t *buf, uint8_t len) {
+    Wire.beginTransmission(EEPROM_ADDR);
+    Wire.write(offset);
+    if (Wire.endTransmission(false) != 0) return false;
+    if (Wire.requestFrom((uint8_t)EEPROM_ADDR, len) != len) return false;
+    for (uint8_t i = 0; i < len; i++) buf[i] = Wire.read();
+    return true;
+}
+
+void hpdps_read_identity(char *model, char *part_num) {
+    uint8_t buf[26];
+
+    if (hpdps_read_eeprom(0x32, buf, 26)) {
+        uint8_t j = 0;
+        for (uint8_t i = 0; i < 26 && j < IDENTITY_MODEL_LEN - 1; i++) {
+            if (buf[i] >= 0x20 && buf[i] < 0x7F) model[j++] = (char)buf[i];
+        }
+        while (j > 0 && model[j - 1] == ' ') j--;
+        model[j] = '\0';
+    } else {
+        model[0] = '\0';
+    }
+
+    if (hpdps_read_eeprom(0x4D, buf, 10)) {
+        uint8_t j = 0;
+        for (uint8_t i = 0; i < 10 && j < IDENTITY_PART_LEN - 1; i++) {
+            if (buf[i] >= 0x20 && buf[i] < 0x7F) part_num[j++] = (char)buf[i];
+        }
+        while (j > 0 && part_num[j - 1] == ' ') j--;
+        part_num[j] = '\0';
+    } else {
+        part_num[0] = '\0';
+    }
 }
 
 void hpdps_set_fan(uint8_t percent) {

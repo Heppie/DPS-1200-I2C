@@ -9,6 +9,8 @@ static DpsSensors sensors = {};
 static bool       powerOn  = false;
 static uint8_t    fanPct   = 0;
 static uint32_t   lastPoll = 0;
+static char       model[IDENTITY_MODEL_LEN]  = {};
+static char       part_num[IDENTITY_PART_LEN] = {};
 
 void setup() {
     Serial.begin(115200);
@@ -16,6 +18,8 @@ void setup() {
     Serial.println("\nHP DPS Control starting...");
 
     hpdps_init();
+    hpdps_read_identity(model, part_num);
+    if (model[0]) Serial.printf("PSU: %s [%s]\n", model, part_num);
 
     if (!provisioning_has_credentials()) {
         Serial.println("No WiFi credentials, starting AP...");
@@ -46,7 +50,7 @@ void setup() {
         Serial.println("mDNS: http://hp-dps-control.local");
     }
 
-    webserver_init(&sensors, &powerOn, &fanPct);
+    webserver_init(&sensors, &powerOn, &fanPct, model, part_num);
     webserver_start();
     Serial.println("Dashboard ready.");
 }

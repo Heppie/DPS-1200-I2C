@@ -7,6 +7,8 @@ static WebServer server(80);
 static DpsSensors *g_sensors;
 static bool      *g_powerOn;
 static uint8_t   *g_fanPct;
+static char       g_model[27];
+static char       g_part_num[11];
 
 static const char DASHBOARD_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -17,7 +19,8 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawliteral(
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:sans-serif;background:#1a1a2e;color:#eee;min-height:100vh;padding:1.5rem}
-h1{color:#4fc3f7;margin-bottom:1.5rem;font-size:1.4rem;text-align:center}
+h1{color:#4fc3f7;margin-bottom:.3rem;font-size:1.4rem;text-align:center}
+.identity{text-align:center;font-size:.8rem;color:#78909c;margin-bottom:1.2rem;min-height:1rem}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem}
 .card{background:#16213e;border-radius:10px;padding:1.2rem;text-align:center}
 .card .label{font-size:.78rem;color:#90caf9;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
@@ -37,11 +40,15 @@ a.reset{display:block;text-align:center;margin-top:.8rem;color:#ef5350;font-size
 </head>
 <body>
 <h1>HP DPS Control</h1>
+<div class="identity" id="identity"></div>
 <div class="grid">
   <div class="card"><div class="label">Input Voltage</div><div class="value" id="grid_v">--</div><div class="unit">V AC</div></div>
   <div class="card"><div class="label">Input Current</div><div class="value" id="grid_a">--</div><div class="unit">A</div></div>
+  <div class="card"><div class="label">Input Power</div><div class="value" id="in_w">--</div><div class="unit">W</div></div>
   <div class="card"><div class="label">Output Voltage</div><div class="value" id="out_v">--</div><div class="unit">V DC</div></div>
   <div class="card"><div class="label">Output Current</div><div class="value" id="out_a">--</div><div class="unit">A</div></div>
+  <div class="card"><div class="label">Output Power</div><div class="value" id="out_w">--</div><div class="unit">W</div></div>
+  <div class="card"><div class="label">Efficiency</div><div class="value" id="efficiency">--</div><div class="unit">%</div></div>
   <div class="card"><div class="label">Temperature</div><div class="value" id="temp_f">--</div><div class="unit">&deg;F</div></div>
   <div class="card"><div class="label">Fan Speed</div><div class="value" id="fan_rpm">--</div><div class="unit">RPM</div></div>
 </div>
@@ -60,12 +67,19 @@ var powerOn = false;
 var fanDebounce = null;
 
 function update(d) {
-  document.getElementById('grid_v').textContent  = d.grid_v.toFixed(1);
-  document.getElementById('grid_a').textContent  = d.grid_a.toFixed(2);
-  document.getElementById('out_v').textContent   = d.out_v.toFixed(2);
-  document.getElementById('out_a').textContent   = d.out_a.toFixed(1);
-  document.getElementById('temp_f').textContent  = d.temp_f.toFixed(1);
-  document.getElementById('fan_rpm').textContent = d.fan_rpm;
+  document.getElementById('grid_v').textContent    = d.grid_v.toFixed(1);
+  document.getElementById('grid_a').textContent    = d.grid_a.toFixed(2);
+  document.getElementById('in_w').textContent      = d.in_w.toFixed(0);
+  document.getElementById('out_v').textContent     = d.out_v.toFixed(2);
+  document.getElementById('out_a').textContent     = d.out_a.toFixed(1);
+  document.getElementById('out_w').textContent     = d.out_w.toFixed(0);
+  document.getElementById('efficiency').textContent = d.efficiency.toFixed(1);
+  document.getElementById('temp_f').textContent    = d.temp_f.toFixed(1);
+  document.getElementById('fan_rpm').textContent   = d.fan_rpm;
+  if (d.model) {
+    var id = d.model + (d.part ? ' — ' + d.part : '');
+    document.getElementById('identity').textContent = id;
+  }
   powerOn = d.power_on;
   var btn = document.getElementById('powerBtn');
   if (powerOn) { btn.textContent='Turn OFF'; btn.className='on'; }
@@ -104,25 +118,32 @@ setInterval(poll, 2000);
 </html>
 )rawliteral";
 
-void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct) {
+void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct,
+                    const char *model, const char *part_num) {
     g_sensors = sensors;
     g_powerOn = powerOn;
     g_fanPct  = fanPct;
+    strncpy(g_model,    model,    sizeof(g_model)    - 1); g_model[sizeof(g_model) - 1]       = '\0';
+    strncpy(g_part_num, part_num, sizeof(g_part_num) - 1); g_part_num[sizeof(g_part_num) - 1] = '\0';
 
     server.on("/", HTTP_GET, []() {
         server.send_P(200, "text/html", DASHBOARD_HTML);
     });
 
     server.on("/data", HTTP_GET, []() {
-        char buf[200];
+        char buf[350];
         snprintf(buf, sizeof(buf),
-            "{\"grid_v\":%.1f,\"grid_a\":%.2f,\"out_v\":%.2f,\"out_a\":%.1f,"
-            "\"temp_f\":%.1f,\"fan_rpm\":%u,\"power_on\":%s,\"fan_pct\":%u}",
-            g_sensors->grid_v, g_sensors->grid_a,
-            g_sensors->out_v,  g_sensors->out_a,
+            "{\"grid_v\":%.1f,\"grid_a\":%.2f,\"in_w\":%.0f,"
+            "\"out_v\":%.2f,\"out_a\":%.1f,\"out_w\":%.0f,\"efficiency\":%.1f,"
+            "\"temp_f\":%.1f,\"fan_rpm\":%u,\"power_on\":%s,\"fan_pct\":%u,"
+            "\"model\":\"%s\",\"part\":\"%s\"}",
+            g_sensors->grid_v, g_sensors->grid_a, g_sensors->in_w,
+            g_sensors->out_v,  g_sensors->out_a,  g_sensors->out_w,
+            g_sensors->efficiency,
             g_sensors->temp_f, g_sensors->fan_rpm,
             *g_powerOn ? "true" : "false",
-            *g_fanPct);
+            *g_fanPct,
+            g_model, g_part_num);
         server.send(200, "application/json", buf);
     });
 
