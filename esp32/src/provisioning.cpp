@@ -55,10 +55,10 @@ static const char PORTAL_HTML[] PROGMEM = R"rawliteral(
     <hr>
     <h3>Display</h3>
     <div class="row">
-      <input type="checkbox" id="oled_chk" name="oled_en" value="1" onchange="tog()">
+      <input type="checkbox" id="oled_chk" name="oled_en" value="1" onchange="tog()" checked>
       <span>Enable 0.42&quot; OLED (SSD1306)</span>
     </div>
-    <div id="oled_opts" style="display:none">
+    <div id="oled_opts">
       <label>I2C Address</label>
       <select name="oled_addr">
         <option value="60">0x3C (default)</option>
@@ -147,7 +147,7 @@ void provisioning_clear() {
 bool provisioning_oled_enabled() {
     Preferences prefs;
     prefs.begin("disp", true);
-    bool en = prefs.getBool("en", false);
+    bool en = prefs.getBool("en", true);
     prefs.end();
     return en;
 }
