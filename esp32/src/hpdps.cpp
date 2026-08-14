@@ -5,8 +5,10 @@
 void hpdps_init() {
     Wire.begin(SDA_PIN, SCL_PIN);
     Wire.setClock(100000);
+#ifdef ENABLE_ONOFF
     pinMode(ONOFF_PIN, OUTPUT);
     digitalWrite(ONOFF_PIN, LOW);
+#endif
 }
 
 bool hpdps_read(uint8_t reg, uint16_t &out) {
@@ -112,5 +114,7 @@ void hpdps_set_fan(uint8_t percent) {
 }
 
 void hpdps_set_power(bool on) {
+#ifdef ENABLE_ONOFF
     digitalWrite(ONOFF_PIN, on ? HIGH : LOW);
+#endif
 }

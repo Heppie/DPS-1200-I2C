@@ -31,6 +31,7 @@ h1{color:#4fc3f7;margin-bottom:.3rem;font-size:1.4rem;text-align:center}
 #powerBtn{padding:.6rem 1.4rem;border:none;border-radius:6px;font-size:1rem;font-weight:bold;cursor:pointer;transition:background .2s}
 #powerBtn.on{background:#ef5350;color:#fff}
 #powerBtn.off{background:#69f0ae;color:#000}
+#powerBtn:disabled{background:#37474f;color:#546e7a;cursor:not-allowed}
 .fan-wrap{display:flex;align-items:center;gap:.8rem;flex:1;min-width:200px}
 #fanSlider{flex:1;accent-color:#4fc3f7}
 #fanVal{min-width:3rem;color:#e0f7fa;font-weight:bold}
@@ -80,6 +81,9 @@ function update(d) {
     var id = d.model + (d.part ? ' — ' + d.part : '');
     document.getElementById('identity').textContent = id;
   }
+  var btn = document.getElementById('powerBtn');
+  btn.disabled = !d.power_ctrl;
+  if (!d.power_ctrl) btn.title = 'Power control not wired (see ENABLE_ONOFF)';
   powerOn = d.power_on;
   var btn = document.getElementById('powerBtn');
   if (powerOn) { btn.textContent='Turn OFF'; btn.className='on'; }
@@ -136,14 +140,20 @@ void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct,
             "{\"grid_v\":%.1f,\"grid_a\":%.2f,\"in_w\":%.0f,"
             "\"out_v\":%.2f,\"out_a\":%.1f,\"out_w\":%.0f,\"efficiency\":%.1f,"
             "\"temp_c\":%.1f,\"fan_rpm\":%u,\"power_on\":%s,\"fan_pct\":%u,"
-            "\"model\":\"%s\",\"part\":\"%s\"}",
+            "\"model\":\"%s\",\"part\":\"%s\",\"power_ctrl\":%s}",
             g_sensors->grid_v, g_sensors->grid_a, g_sensors->in_w,
             g_sensors->out_v,  g_sensors->out_a,  g_sensors->out_w,
             g_sensors->efficiency,
             g_sensors->temp_c, g_sensors->fan_rpm,
             *g_powerOn ? "true" : "false",
             *g_fanPct,
-            g_model, g_part_num);
+            g_model, g_part_num,
+#ifdef ENABLE_ONOFF
+            "true"
+#else
+            "false"
+#endif
+        );
         server.send(200, "application/json", buf);
     });
 
