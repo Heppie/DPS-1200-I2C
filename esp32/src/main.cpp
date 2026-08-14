@@ -37,8 +37,7 @@ void setup() {
     hpdps_read_identity(model, part_num);
     if (model[0]) Serial.printf("PSU: %s [%s]\n", model, part_num);
 
-    oledOn = provisioning_oled_enabled();
-    if (oledOn) oled_init(provisioning_oled_addr());
+    oledOn = oled_init(provisioning_oled_addr());
 
     if (!provisioning_has_credentials()) {
         Serial.println("No WiFi credentials, starting AP...");

@@ -7,9 +7,15 @@
 static U8G2_SSD1306_72X40_ER_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE, 6, 5);
 static bool ready = false;
 
-void oled_init(uint8_t addr) {
-    display.setI2CAddress(addr << 1);
-    ready = display.begin();
+bool oled_init(uint8_t preferredAddr) {
+    uint8_t candidates[2] = { preferredAddr,
+                               (uint8_t)(preferredAddr == 0x3C ? 0x3D : 0x3C) };
+    for (uint8_t a : candidates) {
+        display.setI2CAddress(a << 1);
+        if (display.begin()) { ready = true; return true; }
+    }
+    ready = false;
+    return false;
 }
 
 void oled_show_ap() {
