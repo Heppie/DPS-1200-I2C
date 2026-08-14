@@ -1,6 +1,6 @@
 # HP DPS Control — ESP32-C3 WiFi Dashboard
 
-Monitor and control HP Proliant "Common Slot" server power supplies (DPS-460, DPS-750, DPS-1200) over WiFi from any browser, using an ESP32-C3 and the original I2C adapter hardware.
+Monitor and control HP Proliant "Common Slot" server power supplies (DPS-460, DPS-750, DPS-1200) over WiFi from any browser, using an ESP32-C3.
 
 > This branch is the ESP32-C3 port. The original Arduino Uno sketches live on the `master` branch.
 
@@ -8,14 +8,19 @@ Monitor and control HP Proliant "Common Slot" server power supplies (DPS-460, DP
 
 ## Features
 
-- **First-boot WiFi provisioning** — connect to the `HP-DPS-Setup` access point, enter your WiFi credentials in a browser, and the device saves them and reboots onto your network
+- **First-boot WiFi provisioning** — connect to the `HP-DPS-Setup` access point, scan for networks, pick yours, enter the password, and the device saves and reboots
+- **Falls back to AP mode** if it can't reach the configured network (credentials kept)
 - **Live web dashboard** at `http://hp-dps-control.local` showing:
   - Input voltage & current (AC grid)
   - Output voltage & current (12 V DC)
-  - Internal temperature
+  - Calculated input & output power (W)
+  - Efficiency (%)
+  - Temperature (°C)
   - Fan RPM
-- **Power on/off** toggle button (via GPIO → optocoupler)
+  - PSU model and part number (read from EEPROM)
 - **Fan speed control** slider (0–100%)
+- **Power on/off** toggle (optional — requires GPIO wiring, see below)
+- **0.42" OLED display** support — shows AP IP, connecting status, and live readings; auto-detected at boot
 - **Re-provisioning** — navigate to `/reset` to clear saved credentials and return to AP mode
 
 ---
@@ -24,32 +29,44 @@ Monitor and control HP Proliant "Common Slot" server power supplies (DPS-460, DP
 
 ### Power Supply
 
-Any HP Proliant Common Slot supply works — DPS-460, DPS-750, or DPS-1200. These are widely available used for under $20. The I2C bus is a 3.3 V interface; the adapter handles all level shifting so the ESP32-C3 connects directly.
+Any HP Proliant Common Slot supply — DPS-460, DPS-750, or DPS-1200. Widely available used for under $20. The PSU I2C bus runs at 3.3 V.
 
-### Adapter
+### ESP32-C3 Board
 
-Use the original Butt Simple Ideas adapter (see `master` branch). It provides:
-- 3.3 V regulator
-- 5 V ↔ 3.3 V I2C level shift (not needed for ESP32-C3, but harmless)
-- Optocoupler for on/off control
+Tested with the ESP32-C3 development board with integrated 0.42" SSD1306 OLED ([AliExpress](https://www.aliexpress.com/item/1005007892774677.html)). Any ESP32-C3 board works — the OLED is optional.
 
-### Wiring to ESP32-C3
+### Wiring
 
-| Adapter pin | ESP32-C3 GPIO |
-|-------------|---------------|
-| SDA         | GPIO 4        |
-| SCL         | GPIO 5        |
-| On/Off      | GPIO 3        |
-| 3.3 V       | 3V3           |
-| GND         | GND           |
+Connect the PSU I2C connector directly to the ESP32-C3:
 
-> **Note:** The default I2C address is 0x5F for the PIC and 0x57 for the EEPROM (A0–A2 jumpers all open). If you cannot communicate with the supply, try swapping SDA and SCL — some Common Slot variants require this.
+| PSU pin | ESP32-C3 GPIO | Note                          |
+|---------|---------------|-------------------------------|
+| SDA     | GPIO 5        |                               |
+| SCL     | GPIO 6        |                               |
+| GND     | GND           |                               |
+| On/Off  | GPIO 3        | Optional — see below          |
+
+> **3.3 V only.** The ESP32-C3 is not 5 V tolerant. The PSU I2C bus is 3.3 V so no level shifting is needed for a direct connection.
+
+> **Note:** The default I2C addresses are 0x5F (PIC) and 0x57 (EEPROM). If you can't communicate with the supply, try swapping SDA and SCL — some Common Slot variants require this.
+
+### Optional: Power On/Off Control
+
+To enable the power button on the dashboard, wire GPIO 3 to the PSU PS_ON line via an optocoupler, then uncomment `-DENABLE_ONOFF` in `platformio.ini`. Without this wiring the button is disabled but everything else works normally.
+
+### Optional: OLED Display
+
+A 0.42" SSD1306 OLED on the same I2C bus (GPIO 5/6) is auto-detected at boot. If found it shows:
+
+- **AP mode:** SSID and IP to connect to for setup
+- **Connecting:** target network name
+- **Running:** Vout, Iout, power, efficiency, temperature, fan RPM, and IP address
 
 ---
 
 ## Building & Flashing
 
-This is a [PlatformIO](https://platformio.org/) project targeting the `esp32-c3-devkitm-1` board.
+[PlatformIO](https://platformio.org/) project targeting `esp32-c3-devkitm-1`.
 
 ```bash
 cd esp32/
@@ -57,20 +74,23 @@ pio run --target upload
 pio device monitor
 ```
 
-All required libraries (`Wire`, `WiFi`, `WebServer`, `DNSServer`, `Preferences`, `ESPmDNS`) are bundled with the ESP32 Arduino framework — no external dependencies.
+Dependencies are declared in `platformio.ini` and fetched automatically:
+
+- `WebServer` — HTTP server
+- `Adafruit SSD1306` + `Adafruit GFX Library` — OLED display
 
 ---
 
 ## First-Time Setup
 
 1. Flash the firmware.
-2. On first boot (no saved credentials), the device starts an open access point called **HP-DPS-Setup**.
-3. Connect your phone or laptop to that network — a captive portal should open automatically. If not, navigate to `http://192.168.4.1`.
-4. Enter your WiFi SSID and password and tap **Connect**.
-5. The device saves the credentials, reboots, and connects to your network.
-6. The Serial monitor prints the assigned IP address, and the dashboard is accessible at `http://hp-dps-control.local`.
+2. On first boot the device starts an open access point: **HP-DPS-Setup**.
+3. Connect your phone or laptop to that network — a captive portal opens automatically. If not, go to `http://192.168.4.1`.
+4. Hit **Scan for Networks**, pick yours from the list, enter the password.
+5. Tap **Save & Connect**. The device reboots and joins your network.
+6. The dashboard is at `http://hp-dps-control.local`.
 
-To re-provision (e.g. to change networks), navigate to `http://hp-dps-control.local/reset`.
+To change networks, go to `http://hp-dps-control.local/reset`.
 
 ---
 
@@ -80,39 +100,37 @@ To re-provision (e.g. to change networks), navigate to `http://hp-dps-control.lo
 esp32/
 ├── platformio.ini
 └── src/
-    ├── main.cpp          — boot logic, WiFi connect, poll loop
-    ├── hpdps.h/.cpp      — I2C driver (register reads/writes, CRC, scaling)
-    ├── provisioning.h/.cpp — AP mode captive portal, NVS credential storage
-    └── dashboard.h/.cpp  — HTTP web server, JSON data endpoint, dashboard HTML
+    ├── main.cpp              — boot sequence, WiFi connect, poll loop
+    ├── hpdps.h / hpdps.cpp   — I2C driver: register reads/writes, CRC, scaling
+    ├── provisioning.h / .cpp — AP captive portal, NVS credential & display storage
+    ├── dashboard.h / .cpp    — HTTP server, JSON endpoint, dashboard HTML/CSS/JS
+    └── oled.h / oled.cpp     — SSD1306 display (AP, connecting, live readings)
 ```
 
 ---
 
 ## I2C Protocol Notes
 
-The Common Slot supplies use a proprietary protocol (not PMBus/SMBus). All PIC reads and writes require a CRC-8 checksum:
+The Common Slot supplies use a proprietary protocol (not PMBus/SMBus). All PIC (0x5F) reads and writes require a CRC-8 checksum. EEPROM (0x57) reads require no checksum.
 
-- **Polynomial:** P(x) = x⁸ + x² + x¹ + x⁰
 - Read checksum: `((0xFF − ((addr<<1) + reg)) + 1) & 0xFF`
 - Write checksum: `((0xFF − ((addr<<1) + reg + LSB + MSB)) + 1) & 0xFF`
 
-EEPROM reads and writes do **not** require a checksum.
-
-| Register | Measurement        | Scale  | Unit |
-|----------|--------------------|--------|------|
-| 0x08     | Input voltage      | ÷ 32   | V AC |
-| 0x0A     | Input current      | ÷ 128  | A    |
-| 0x0E     | Output voltage     | ÷ 256  | V DC |
-| 0x10     | Output current     | ÷ 128  | A    |
-| 0x1C     | Temperature        | ÷ 32   | °F   |
-| 0x1E     | Fan speed          | raw    | RPM  |
-| 0x40     | Fan PWM (write)    | 0–0x1000 | —  |
+| Register   | Measurement        | Scale    | Unit |
+|------------|--------------------|----------|------|
+| 0x08       | Input voltage      | ÷ 32     | V AC |
+| 0x0A       | Input current      | ÷ 128    | A    |
+| 0x0E       | Output voltage     | ÷ 256    | V DC |
+| 0x10       | Output current     | ÷ 128    | A    |
+| 0x1C       | Temperature        | ÷ 32, then (raw − 32) × 5/9 | °C |
+| 0x1E       | Fan speed          | raw      | RPM  |
+| 0x40       | Fan PWM (write)    | 0–0x1000 | —    |
+| EEPROM 0x32–0x4B | Model name   | 26 bytes | ASCII |
+| EEPROM 0x4D–0x56 | Part number  | 10 bytes | ASCII |
 
 ---
 
 ## Credits
-
-This project builds on the original work by Butt Simple Ideas, LLC and the reverse-engineering community:
 
 - **Original Arduino sketches & adapter hardware:** [Butt Simple Ideas](http://www.buttsimpleideas.com/) — Garry Mercaldi
 - **DPS-1200 reverse engineering:** [Dr. Tune / Richard Aplin](https://github.com/raplin/DPS-1200FB)
