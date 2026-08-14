@@ -4,6 +4,7 @@
 #include "hpdps.h"
 #include "provisioning.h"
 #include "dashboard.h"
+#include "oled.h"
 
 static DpsSensors sensors = {};
 static bool       powerOn  = false;
@@ -11,6 +12,8 @@ static uint8_t    fanPct   = 0;
 static uint32_t   lastPoll = 0;
 static char       model[IDENTITY_MODEL_LEN]  = {};
 static char       part_num[IDENTITY_PART_LEN] = {};
+static char       ipStr[16] = {};
+static bool       oledOn = false;
 
 void setup() {
     Serial.begin(115200);
@@ -21,8 +24,12 @@ void setup() {
     hpdps_read_identity(model, part_num);
     if (model[0]) Serial.printf("PSU: %s [%s]\n", model, part_num);
 
+    oledOn = provisioning_oled_enabled();
+    if (oledOn) oled_init(provisioning_oled_addr());
+
     if (!provisioning_has_credentials()) {
         Serial.println("No WiFi credentials, starting AP...");
+        if (oledOn) oled_show_ap();
         provisioning_run_ap();
         ESP.restart();
     }
@@ -30,6 +37,7 @@ void setup() {
     String ssid, pass;
     provisioning_load(ssid, pass);
     Serial.printf("Connecting to %s\n", ssid.c_str());
+    if (oledOn) oled_show_connecting(ssid.c_str());
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid.c_str(), pass.c_str());
@@ -37,14 +45,17 @@ void setup() {
     uint32_t t = millis();
     while (WiFi.status() != WL_CONNECTED) {
         if (millis() - t > 15000) {
-            Serial.println("WiFi timeout, clearing credentials and restarting...");
-            provisioning_clear();
+            Serial.println("WiFi timeout, returning to setup portal...");
+            WiFi.disconnect();
+            if (oledOn) oled_show_ap();
+            provisioning_run_ap();
             ESP.restart();
         }
         delay(250);
         Serial.print(".");
     }
-    Serial.printf("\nConnected! IP: %s\n", WiFi.localIP().toString().c_str());
+    WiFi.localIP().toString().toCharArray(ipStr, sizeof(ipStr));
+    Serial.printf("\nConnected! IP: %s\n", ipStr);
 
     if (MDNS.begin("hp-dps-control")) {
         Serial.println("mDNS: http://hp-dps-control.local");
@@ -60,6 +71,7 @@ void loop() {
 
     if (millis() - lastPoll >= 2000) {
         hpdps_read_all(sensors);
+        if (oledOn) oled_update(sensors, ipStr);
         lastPoll = millis();
     }
 }
