@@ -2,15 +2,14 @@
 #include <U8g2lib.h>
 #include <Wire.h>
 
-static U8G2_SSD1306_72X40_ER_F_HW_I2C display(U8G2_R0);
+// SCL=6, SDA=5 passed explicitly so U8g2 doesn't reinitialise Wire
+// with ESP32-C3 defaults (GPIO8/9), which would break PSU I2C too
+static U8G2_SSD1306_72X40_ER_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE, 6, 5);
 static bool ready = false;
 
 void oled_init(uint8_t addr) {
     display.setI2CAddress(addr << 1);
     ready = display.begin();
-    if (ready) {
-        display.clearDisplay();
-    }
 }
 
 void oled_show_ap() {
