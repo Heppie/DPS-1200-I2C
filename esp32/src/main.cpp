@@ -21,7 +21,7 @@ static bool     ledState  = false;
 static void led_blink(uint32_t interval) {
     if (millis() - lastBlink >= interval) {
         ledState = !ledState;
-        digitalWrite(LED_PIN, ledState ? LOW : HIGH);
+        digitalWrite(LED_PIN, ledState ? HIGH : LOW);
         lastBlink = millis();
     }
 }
@@ -29,7 +29,7 @@ static void led_blink(uint32_t interval) {
 void setup() {
     Serial.begin(115200);
     pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH); // active-low, start off
+    digitalWrite(LED_PIN, LOW); // off at boot
     delay(500);
     Serial.println("\nHP DPS Control starting...");
 
@@ -38,6 +38,7 @@ void setup() {
     if (model[0]) Serial.printf("PSU: %s [%s]\n", model, part_num);
 
     oledOn = oled_init(provisioning_oled_addr());
+    Serial.printf("OLED: %s\n", oledOn ? "OK" : "not found");
 
     if (!provisioning_has_credentials()) {
         Serial.println("No WiFi credentials, starting AP...");
@@ -67,7 +68,7 @@ void setup() {
         delay(250);
         Serial.print(".");
     }
-    digitalWrite(LED_PIN, LOW); // active-low = on solid when connected
+    digitalWrite(LED_PIN, HIGH); // solid on when connected
     WiFi.localIP().toString().toCharArray(ipStr, sizeof(ipStr));
     Serial.printf("\nConnected! IP: %s\n", ipStr);
 
