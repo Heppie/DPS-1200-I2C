@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include "dps1200.h"
+#include "hpdps.h"
 #include "provisioning.h"
 #include "dashboard.h"
 
@@ -13,9 +13,9 @@ static uint32_t   lastPoll = 0;
 void setup() {
     Serial.begin(115200);
     delay(500);
-    Serial.println("\nDPS1200 ESP32-C3 starting...");
+    Serial.println("\nHP DPS Control starting...");
 
-    dps1200_init();
+    hpdps_init();
 
     if (!provisioning_has_credentials()) {
         Serial.println("No WiFi credentials, starting AP...");
@@ -42,8 +42,8 @@ void setup() {
     }
     Serial.printf("\nConnected! IP: %s\n", WiFi.localIP().toString().c_str());
 
-    if (MDNS.begin("dps1200")) {
-        Serial.println("mDNS: http://dps1200.local");
+    if (MDNS.begin("hp-dps-control")) {
+        Serial.println("mDNS: http://hp-dps-control.local");
     }
 
     webserver_init(&sensors, &powerOn, &fanPct);
@@ -55,7 +55,7 @@ void loop() {
     webserver_handle();
 
     if (millis() - lastPoll >= 2000) {
-        dps1200_read_all(sensors);
+        hpdps_read_all(sensors);
         lastPoll = millis();
     }
 }

@@ -16,9 +16,9 @@ struct DpsSensors {
     bool valid;
 };
 
-void dps1200_init();
-bool dps1200_read(uint8_t reg, uint16_t &out);
-bool dps1200_write(uint8_t reg, uint16_t val);
-bool dps1200_read_all(DpsSensors &out);
-void dps1200_set_fan(uint8_t percent);
-void dps1200_set_power(bool on);
+void hpdps_init();
+bool hpdps_read(uint8_t reg, uint16_t &out);
+bool hpdps_write(uint8_t reg, uint16_t val);
+bool hpdps_read_all(DpsSensors &out);
+void hpdps_set_fan(uint8_t percent);
+void hpdps_set_power(bool on);

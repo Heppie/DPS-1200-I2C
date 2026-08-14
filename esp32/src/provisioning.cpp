@@ -9,7 +9,7 @@ static const char PORTAL_HTML[] PROGMEM = R"rawliteral(
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DPS1200 Setup</title>
+<title>HP DPS Control Setup</title>
 <style>
   body{font-family:sans-serif;background:#1a1a2e;color:#eee;display:flex;
        justify-content:center;align-items:center;min-height:100vh;margin:0}
@@ -25,7 +25,7 @@ static const char PORTAL_HTML[] PROGMEM = R"rawliteral(
 </head>
 <body>
 <div class="card">
-  <h2>DPS1200 WiFi Setup</h2>
+  <h2>HP DPS Control WiFi Setup</h2>
   <form method="POST" action="/save">
     <label>WiFi Network (SSID)</label>
     <input type="text" name="ssid" placeholder="Your WiFi name" required>
@@ -89,8 +89,8 @@ void provisioning_run_ap() {
         IPAddress(192, 168, 4, 1),
         IPAddress(255, 255, 255, 0)
     );
-    WiFi.softAP("DPS1200-Setup");
-    Serial.println("AP started: DPS1200-Setup @ 192.168.4.1");
+    WiFi.softAP("HP-DPS-Setup");
+    Serial.println("AP started: HP-DPS-Setup @ 192.168.4.1");
 
     DNSServer dns;
     dns.start(53, "*", IPAddress(192, 168, 4, 1));

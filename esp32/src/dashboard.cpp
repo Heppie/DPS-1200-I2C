@@ -13,7 +13,7 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawliteral(
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DPS1200 Dashboard</title>
+<title>HP DPS Control</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:sans-serif;background:#1a1a2e;color:#eee;min-height:100vh;padding:1.5rem}
@@ -36,7 +36,7 @@ a.reset{display:block;text-align:center;margin-top:.8rem;color:#ef5350;font-size
 </style>
 </head>
 <body>
-<h1>DPS1200 Power Supply</h1>
+<h1>HP DPS Control</h1>
 <div class="grid">
   <div class="card"><div class="label">Input Voltage</div><div class="value" id="grid_v">--</div><div class="unit">V AC</div></div>
   <div class="card"><div class="label">Input Current</div><div class="value" id="grid_a">--</div><div class="unit">A</div></div>
@@ -130,7 +130,7 @@ void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct) {
         if (server.hasArg("state")) {
             bool on = server.arg("state") == "1";
             *g_powerOn = on;
-            dps1200_set_power(on);
+            hpdps_set_power(on);
         }
         server.send(200, "text/plain", "ok");
     });
@@ -139,7 +139,7 @@ void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct) {
         if (server.hasArg("speed")) {
             uint8_t pct = (uint8_t)constrain(server.arg("speed").toInt(), 0, 100);
             *g_fanPct = pct;
-            dps1200_set_fan(pct);
+            hpdps_set_fan(pct);
         }
         server.send(200, "text/plain", "ok");
     });

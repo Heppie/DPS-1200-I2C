@@ -1,5 +1,5 @@
 #pragma once
-#include "dps1200.h"
+#include "hpdps.h"
 
 void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct);
 void webserver_start();
