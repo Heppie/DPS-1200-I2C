@@ -49,7 +49,7 @@ a.reset{display:block;text-align:center;margin-top:.8rem;color:#ef5350;font-size
   <div class="card"><div class="label">Output Current</div><div class="value" id="out_a">--</div><div class="unit">A</div></div>
   <div class="card"><div class="label">Output Power</div><div class="value" id="out_w">--</div><div class="unit">W</div></div>
   <div class="card"><div class="label">Efficiency</div><div class="value" id="efficiency">--</div><div class="unit">%</div></div>
-  <div class="card"><div class="label">Temperature</div><div class="value" id="temp_f">--</div><div class="unit">&deg;F</div></div>
+  <div class="card"><div class="label">Temperature</div><div class="value" id="temp_c">--</div><div class="unit">&deg;C</div></div>
   <div class="card"><div class="label">Fan Speed</div><div class="value" id="fan_rpm">--</div><div class="unit">RPM</div></div>
 </div>
 <div class="controls">
@@ -74,7 +74,7 @@ function update(d) {
   document.getElementById('out_a').textContent     = d.out_a.toFixed(1);
   document.getElementById('out_w').textContent     = d.out_w.toFixed(0);
   document.getElementById('efficiency').textContent = d.efficiency.toFixed(1);
-  document.getElementById('temp_f').textContent    = d.temp_f.toFixed(1);
+  document.getElementById('temp_c').textContent    = d.temp_c.toFixed(1);
   document.getElementById('fan_rpm').textContent   = d.fan_rpm;
   if (d.model) {
     var id = d.model + (d.part ? ' — ' + d.part : '');
@@ -135,12 +135,12 @@ void webserver_init(DpsSensors *sensors, bool *powerOn, uint8_t *fanPct,
         snprintf(buf, sizeof(buf),
             "{\"grid_v\":%.1f,\"grid_a\":%.2f,\"in_w\":%.0f,"
             "\"out_v\":%.2f,\"out_a\":%.1f,\"out_w\":%.0f,\"efficiency\":%.1f,"
-            "\"temp_f\":%.1f,\"fan_rpm\":%u,\"power_on\":%s,\"fan_pct\":%u,"
+            "\"temp_c\":%.1f,\"fan_rpm\":%u,\"power_on\":%s,\"fan_pct\":%u,"
             "\"model\":\"%s\",\"part\":\"%s\"}",
             g_sensors->grid_v, g_sensors->grid_a, g_sensors->in_w,
             g_sensors->out_v,  g_sensors->out_a,  g_sensors->out_w,
             g_sensors->efficiency,
-            g_sensors->temp_f, g_sensors->fan_rpm,
+            g_sensors->temp_c, g_sensors->fan_rpm,
             *g_powerOn ? "true" : "false",
             *g_fanPct,
             g_model, g_part_num);

@@ -57,7 +57,7 @@ bool hpdps_read_all(DpsSensors &s) {
     s.out_a = raw / 128.0f;
 
     if (!hpdps_read(0x1C, raw)) return false;
-    s.temp_f = raw / 32.0f;
+    s.temp_c = (raw / 32.0f - 32.0f) * 5.0f / 9.0f;
 
     if (!hpdps_read(0x1E, raw)) return false;
     s.fan_rpm = raw;

@@ -18,7 +18,7 @@ struct DpsSensors {
     float out_a;
     float out_w;
     float efficiency;
-    float temp_f;
+    float temp_c;
     uint16_t fan_rpm;
     bool valid;
 };
